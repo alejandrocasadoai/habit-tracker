@@ -2,50 +2,66 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Habit Tracker Notion</title>
+  <title>Habit Tracker</title>
   <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-accent: #ececec;
+      --color-blue: #e0f0ff;
+      --color-blue-dark: #4a90e2;
+      --color-text: #333;
+      --color-border: #ddd;
+      --radius: 8px;
+    }
     body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      padding: 20px;
+      font-family: "Inter", sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      padding: 16px;
       margin: 0;
     }
     .tracker {
       background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       overflow-x: auto;
     }
     h1 {
-      text-align: center;
+      font-size: 20px;
+      margin-bottom: 12px;
     }
     .controls {
       display: flex;
-      justify-content: space-between;
       flex-wrap: wrap;
+      justify-content: space-between;
       margin-bottom: 10px;
     }
     select, button, input.habit-input {
-      padding: 6px 12px;
-      margin: 5px 0;
       font-size: 14px;
+      margin: 4px 0;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      background: #f9f9f9;
+    }
+    button:hover {
+      background: #eee;
+      cursor: pointer;
     }
     table {
       border-collapse: collapse;
       width: 100%;
-      min-width: 900px;
+      min-width: 850px;
     }
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid var(--color-border);
       padding: 4px;
       text-align: center;
     }
     th {
-      background: #007bff;
-      color: white;
-      position: sticky;
-      top: 0;
+      background: var(--color-accent);
+      font-weight: 500;
     }
     .habit-cell {
       display: flex;
@@ -54,12 +70,10 @@
     }
     .delete-btn {
       display: none;
-      margin-left: 5px;
-      background: red;
-      color: white;
+      background: none;
       border: none;
-      border-radius: 4px;
-      padding: 0 6px;
+      font-size: 14px;
+      color: #999;
       cursor: pointer;
     }
     tr:hover .delete-btn {
@@ -68,11 +82,15 @@
     input[type="text"] {
       width: 100%;
       border: none;
-      font-weight: bold;
-      background: none;
+      background: transparent;
+      font-weight: 500;
     }
     input[type="checkbox"] {
       transform: scale(1.2);
+    }
+    .label-col {
+      background: var(--color-blue);
+      font-weight: bold;
     }
   </style>
 </head>
@@ -125,9 +143,9 @@
       if (!data[month]) data[month] = [];
 
       // Header
-      let headRow = '<tr><th>Hábito</th>';
+      let headRow = '<tr><th class="label-col">Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
-      headRow += '<th>%</th></tr>';
+      headRow += '<th class="label-col">%</th></tr>';
       thead.innerHTML = headRow;
 
       // Body
@@ -138,7 +156,7 @@
         const completed = habit.days.filter(x => x).length;
         const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
         return `<tr>
-          <td class="habit-cell">
+          <td class="habit-cell label-col">
             <input type="text" value="${habit.name}" onchange="renameHabit(${i}, this.value)">
             <button class="delete-btn" onclick="deleteHabit(${i})">🗑</button>
           </td>
@@ -174,11 +192,9 @@
 
     function deleteHabit(index) {
       const month = monthSelect.value;
-      if (confirm('¿Eliminar este hábito?')) {
-        data[month].splice(index, 1);
-        save();
-        renderTable();
-      }
+      data[month].splice(index, 1);
+      save();
+      renderTable();
     }
 
     function clearChecks() {
