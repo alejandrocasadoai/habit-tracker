@@ -16,9 +16,6 @@
       padding: 20px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       overflow-x: auto;
-      width: 100%;
-      max-width: 900px;
-      margin: auto;
     }
     h1, h2 {
       text-align: center;
@@ -30,7 +27,6 @@
       align-items: center;
       flex-wrap: wrap;
       margin-bottom: 10px;
-      gap: 8px;
     }
     .controls select, .controls button {
       margin: 5px;
@@ -46,14 +42,12 @@
       border: 1px solid #dee2e6;
       padding: 4px;
       text-align: center;
-      position: relative;
     }
     th {
       background-color: #007bff;
       color: white;
       position: sticky;
       top: 0;
-      z-index: 1;
     }
     input.habit-name {
       width: 100%;
@@ -61,7 +55,6 @@
       background: none;
       font-weight: bold;
       text-align: left;
-      padding-right: 30px; /* espacio para botón borrar */
     }
     input[type="checkbox"] {
       transform: scale(1.2);
@@ -81,10 +74,10 @@
       cursor: pointer;
     }
 
-    /* NUEVO: botón borrar hábito solo visible al hover */
+    /* Mostrar botón borrar solo al pasar el ratón sobre el nombre del hábito */
     td:first-child {
       position: relative;
-      padding-right: 30px; /* espacio para botón borrar */
+      padding-right: 30px; /* espacio para el botón */
     }
     .delete-btn {
       position: absolute;
@@ -123,9 +116,9 @@
         <div>
           <label for="month">Mes:</label>
           <select id="month" onchange="renderTable()"></select>
-          <button id="clear-month-btn">Borrar Todo</button>
+          <button onclick="clearMonth()">Borrar Todo</button>
         </div>
-        <button id="add-habit-btn">➕ Añadir Hábito</button>
+        <button onclick="addHabit()">➕ Añadir Hábito</button>
       </div>
       <table>
         <thead id="thead"></thead>
@@ -145,6 +138,7 @@
              onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+    // Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyButOI6-sOf93l8J9WZU48IYH2V9posmRA",
       authDomain: "habit-tracker-458af.firebaseapp.com",
@@ -160,6 +154,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // UI refs
     const loginDiv = document.getElementById('loginDiv');
     const appDiv = document.getElementById('appDiv');
     const emailInput = document.getElementById('email');
@@ -167,15 +162,12 @@
     const signUpBtn = document.getElementById('sign-up');
     const signInBtn = document.getElementById('sign-in');
     const signOutBtn = document.getElementById('sign-out');
-    const monthSelect = document.getElementById('month');
-    const thead = document.getElementById('thead');
-    const tbody = document.getElementById('tbody');
-    const addHabitBtn = document.getElementById('add-habit-btn');
-    const clearMonthBtn = document.getElementById('clear-month-btn');
 
+    // Datos de hábitos y usuario actual
     let currentUser = null;
-    let data = {};
+    let data = {}; // estructura: { Enero: [{name:"", days:[bool,...]}, ...], Febrero: [...], ... }
 
+    // Meses y días
     const months = [
       'Enero','Febrero','Marzo','Abril','Mayo','Junio',
       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
@@ -185,6 +177,12 @@
       Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31
     };
 
+    // UI select y tabla
+    const monthSelect = document.getElementById('month');
+    const thead = document.getElementById('thead');
+    const tbody = document.getElementById('tbody');
+
+    // Carga meses en el select
     months.forEach(m => {
       const opt = document.createElement('option');
       opt.value = m;
@@ -192,6 +190,7 @@
       monthSelect.appendChild(opt);
     });
 
+    // Registro
     signUpBtn.onclick = () => {
       const email = emailInput.value;
       const password = passwordInput.value;
@@ -200,6 +199,7 @@
         .catch(e => alert('Error al registrar: ' + e.message));
     };
 
+    // Login
     signInBtn.onclick = () => {
       const email = emailInput.value;
       const password = passwordInput.value;
@@ -207,24 +207,29 @@
         .catch(e => alert('Error al iniciar sesión: ' + e.message));
     };
 
+    // Logout
     signOutBtn.onclick = () => {
       signOut(auth);
     };
 
+    // Escuchar cambios de sesión
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
         loginDiv.style.display = 'none';
         appDiv.style.display = 'block';
+        // Cargar datos Firestore
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           data = docSnap.data();
         } else {
+          // Inicializar con meses vacíos
           data = {};
           months.forEach(m => data[m] = []);
           await save();
         }
+        // Poner mes actual y renderizar
         const now = new Date();
         monthSelect.value = months[now.getMonth()];
         renderTable();
@@ -236,100 +241,95 @@
       }
     });
 
+    // Guardar datos a Firestore
     async function save() {
       if (!currentUser) return;
       const docRef = doc(db, "users", currentUser.uid);
       await setDoc(docRef, data);
     }
 
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, m => {
-        switch (m) {
-          case '&': return '&amp;';
-          case '<': return '&lt;';
-          case '>': return '&gt;';
-          case '"': return '&quot;';
-          case "'": return '&#39;';
-          default: return m;
-        }
-      });
-    }
-
+    // Render tabla
     function renderTable() {
       const month = monthSelect.value;
       if (!data[month]) data[month] = [];
 
       const days = daysInMonth[month];
+      // Header
       let headRow = '<tr><th>Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
       headRow += `<th>%</th></tr>`;
       thead.innerHTML = headRow;
 
+      // Body
       tbody.innerHTML = data[month].map((habit, i) => {
-        const checks = habit.days.map((checked, j) =>
-          `<td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggle(${i},${j})"></td>`
+        const checks = habit.days.map((checked, day) =>
+          `<td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleDay(${i},${day})"></td>`
         ).join('');
-        const completed = habit.days.filter(x => x).length;
-        const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
-        return `<tr>
-          <td>
-            <input class="habit-name" type="text" value="${escapeHtml(habit.name)}" onchange="updateName(${i}, this.value)" />
-            <button class="delete-btn" onclick="deleteHabit(${i})" title="Borrar hábito">✕</button>
-          </td>
-          ${checks}
-          <td><strong>${percent}%</strong></td>
-        </tr>`;
+        const total = habit.days.length;
+        const done = habit.days.filter(Boolean).length;
+        const percent = total ? Math.round(done * 100 / total) : 0;
+        return `
+          <tr>
+            <td>
+              <input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)">
+              <button class="delete-btn" onclick="deleteHabit(${i})" title="Borrar hábito">✕</button>
+            </td>
+            ${checks}
+            <td>${percent}%</td>
+          </tr>
+        `;
       }).join('');
     }
 
-    window.toggle = function(habitIndex, dayIndex) {
-      const month = monthSelect.value;
-      if (!data[month]) data[month] = [];
-      const habit = data[month][habitIndex];
-      if (!habit) return;
-      habit.days[dayIndex] = !habit.days[dayIndex];
-      save();
-      renderTable();
-    };
-
-    window.updateName = function(habitIndex, newName) {
-      const month = monthSelect.value;
-      if (!data[month]) data[month] = [];
-      data[month][habitIndex].name = newName.trim();
-      save();
-    };
-
-    window.deleteHabit = function(habitIndex) {
-      const month = monthSelect.value;
-      if (!data[month]) data[month] = [];
-      data[month].splice(habitIndex, 1);
-      save();
-      renderTable();
-    };
-
-    addHabitBtn.onclick = () => {
+    // Añadir hábito
+    function addHabit() {
       const month = monthSelect.value;
       if (!data[month]) data[month] = [];
       const days = daysInMonth[month];
       data[month].push({ name: 'Nuevo hábito', days: new Array(days).fill(false) });
       save();
       renderTable();
-    };
+    }
 
-    clearMonthBtn.onclick = () => {
+    // Renombrar hábito
+    function renameHabit(i, newName) {
+      const month = monthSelect.value;
+      if (!data[month]) return;
+      data[month][i].name = newName;
+      save();
+      renderTable();
+    }
+
+    // Cambiar check de día
+    function toggleDay(i, day) {
+      const month = monthSelect.value;
+      if (!data[month]) return;
+      data[month][i].days[day] = !data[month][i].days[day];
+      save();
+      renderTable();
+    }
+
+    // Borrar hábito individual
+    function deleteHabit(habitIndex) {
+      const month = monthSelect.value;
+      if (!data[month]) data[month] = [];
+      data[month].splice(habitIndex, 1);
+      save();
+      renderTable();
+    }
+
+    // Borrar solo checks del mes
+    window.clearMonth = async function() {
       const month = monthSelect.value;
       if (!data[month]) data[month] = [];
       data[month].forEach(habit => {
         habit.days = habit.days.map(() => false);
       });
-      save();
-      renderTable();
-    };
-
-    monthSelect.onchange = () => {
+      await save();
       renderTable();
     };
   </script>
 
 </body>
 </html>
+
