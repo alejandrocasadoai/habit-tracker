@@ -2,35 +2,33 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Habit Tracker</title>
+  <title>Habit Tracker Notion</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f8f9fa;
-      margin: 0;
       padding: 20px;
+      margin: 0;
     }
     .tracker {
       background: #fff;
-      border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       overflow-x: auto;
     }
     h1 {
       text-align: center;
-      margin-bottom: 20px;
     }
     .controls {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       flex-wrap: wrap;
       margin-bottom: 10px;
     }
-    .controls select, .controls button {
-      margin: 5px;
+    select, button, input.habit-input {
       padding: 6px 12px;
+      margin: 5px 0;
       font-size: 14px;
     }
     table {
@@ -39,22 +37,39 @@
       min-width: 900px;
     }
     th, td {
-      border: 1px solid #dee2e6;
+      border: 1px solid #ddd;
       padding: 4px;
       text-align: center;
     }
     th {
-      background-color: #007bff;
+      background: #007bff;
       color: white;
       position: sticky;
       top: 0;
     }
-    input.habit-name {
+    .habit-cell {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .delete-btn {
+      display: none;
+      margin-left: 5px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0 6px;
+      cursor: pointer;
+    }
+    tr:hover .delete-btn {
+      display: inline;
+    }
+    input[type="text"] {
       width: 100%;
       border: none;
-      background: none;
       font-weight: bold;
-      text-align: left;
+      background: none;
     }
     input[type="checkbox"] {
       transform: scale(1.2);
@@ -68,9 +83,12 @@
       <div>
         <label for="month">Mes:</label>
         <select id="month" onchange="renderTable()"></select>
-        <button onclick="clearMonth()">Borrar Todo</button>
+        <button onclick="clearChecks()">🧼 Borrar casillas</button>
       </div>
-      <button onclick="addHabit()">➕ Añadir Hábito</button>
+      <div>
+        <input type="text" id="habitInput" class="habit-input" placeholder="Nuevo hábito">
+        <button onclick="addHabit()">➕ Añadir</button>
+      </div>
     </div>
     <table>
       <thead id="thead"></thead>
@@ -79,15 +97,13 @@
   </div>
 
   <script>
-    const months = [
-      'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
-    ];
+    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const daysInMonth = {
       Enero: 31, Febrero: 28, Marzo: 31, Abril: 30, Mayo: 31, Junio: 30,
       Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31
     };
     const monthSelect = document.getElementById('month');
+    const habitInput = document.getElementById('habitInput');
     const thead = document.getElementById('thead');
     const tbody = document.getElementById('tbody');
     let data = JSON.parse(localStorage.getItem('habitData') || '{}');
@@ -105,13 +121,13 @@
 
     function renderTable() {
       const month = monthSelect.value;
+      const days = daysInMonth[month];
       if (!data[month]) data[month] = [];
 
-      const days = daysInMonth[month];
       // Header
       let headRow = '<tr><th>Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
-      headRow += `<th>%</th></tr>`;
+      headRow += '<th>%</th></tr>';
       thead.innerHTML = headRow;
 
       // Body
@@ -122,11 +138,25 @@
         const completed = habit.days.filter(x => x).length;
         const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
         return `<tr>
-          <td><input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)"></td>
+          <td class="habit-cell">
+            <input type="text" value="${habit.name}" onchange="renameHabit(${i}, this.value)">
+            <button class="delete-btn" onclick="deleteHabit(${i})">🗑</button>
+          </td>
           ${checks}
           <td><strong>${percent}%</strong></td>
         </tr>`;
       }).join('');
+    }
+
+    function addHabit() {
+      const name = habitInput.value.trim();
+      if (!name) return;
+      const month = monthSelect.value;
+      const days = daysInMonth[month];
+      data[month].push({ name, days: Array(days).fill(false) });
+      habitInput.value = '';
+      save();
+      renderTable();
     }
 
     function toggle(habitIdx, dayIdx) {
@@ -142,24 +172,20 @@
       save();
     }
 
-    function addHabit() {
+    function deleteHabit(index) {
       const month = monthSelect.value;
-      const name = prompt('Nombre del hábito:');
-      if (name) {
-        const days = daysInMonth[month];
-        data[month].push({ name, days: Array(days).fill(false) });
+      if (confirm('¿Eliminar este hábito?')) {
+        data[month].splice(index, 1);
         save();
         renderTable();
       }
     }
 
-    function clearMonth() {
+    function clearChecks() {
       const month = monthSelect.value;
-      if (confirm(`¿Borrar todos los hábitos del mes de ${month}?`)) {
-        data[month] = [];
-        save();
-        renderTable();
-      }
+      data[month].forEach(h => h.days = h.days.map(() => false));
+      save();
+      renderTable();
     }
 
     window.onload = () => {
