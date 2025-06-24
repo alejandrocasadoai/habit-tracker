@@ -42,6 +42,7 @@
       border: 1px solid #dee2e6;
       padding: 4px;
       text-align: center;
+      vertical-align: middle;
     }
     th {
       background-color: #007bff;
@@ -58,6 +59,7 @@
     }
     input[type="checkbox"] {
       transform: scale(1.2);
+      cursor: pointer;
     }
     #loginDiv, #appDiv {
       max-width: 900px;
@@ -72,6 +74,43 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+    }
+    button.delete-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button.delete-btn:hover {
+      background-color: #b02a37;
+    }
+    .add-habit-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .add-habit-container input {
+      padding: 6px 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      flex-grow: 1;
+    }
+    .clear-confirm {
+      background-color: #ffc107;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-left: 10px;
+      font-weight: bold;
+    }
+    .clear-confirm:hover {
+      background-color: #e0a800;
     }
   </style>
 </head>
@@ -92,9 +131,13 @@
         <div>
           <label for="month">Mes:</label>
           <select id="month" onchange="renderTable()"></select>
-          <button onclick="clearMonth()">Borrar Todo</button>
+          <button id="clear-month-btn">Borrar Todo</button>
+          <button id="confirm-clear-btn" class="clear-confirm" style="display:none;">Confirmar Borrado</button>
         </div>
-        <button onclick="addHabit()">➕ Añadir Hábito</button>
+        <div class="add-habit-container">
+          <input type="text" id="new-habit-name" placeholder="Nuevo hábito..." />
+          <button id="add-habit-btn">➕ Añadir</button>
+        </div>
       </div>
       <table>
         <thead id="thead"></thead>
@@ -138,6 +181,13 @@
     const signUpBtn = document.getElementById('sign-up');
     const signInBtn = document.getElementById('sign-in');
     const signOutBtn = document.getElementById('sign-out');
+    const monthSelect = document.getElementById('month');
+    const thead = document.getElementById('thead');
+    const tbody = document.getElementById('tbody');
+    const newHabitInput = document.getElementById('new-habit-name');
+    const addHabitBtn = document.getElementById('add-habit-btn');
+    const clearMonthBtn = document.getElementById('clear-month-btn');
+    const confirmClearBtn = document.getElementById('confirm-clear-btn');
 
     // Datos de hábitos y usuario actual
     let currentUser = null;
@@ -153,11 +203,6 @@
       Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31
     };
 
-    // UI select y tabla
-    const monthSelect = document.getElementById('month');
-    const thead = document.getElementById('thead');
-    const tbody = document.getElementById('tbody');
-
     // Carga meses en el select
     months.forEach(m => {
       const opt = document.createElement('option');
@@ -171,8 +216,11 @@
       const email = emailInput.value;
       const password = passwordInput.value;
       createUserWithEmailAndPassword(auth, email, password)
-        .then(() => alert('Usuario registrado correctamente'))
-        .catch(e => alert('Error al registrar: ' + e.message));
+        .then(() => {
+          // Mensaje sin alert
+          alertUser('Usuario registrado correctamente');
+        })
+        .catch(e => alertUser('Error al registrar: ' + e.message));
     };
 
     // Login
@@ -180,7 +228,7 @@
       const email = emailInput.value;
       const password = passwordInput.value;
       signInWithEmailAndPassword(auth, email, password)
-        .catch(e => alert('Error al iniciar sesión: ' + e.message));
+        .catch(e => alertUser('Error al iniciar sesión: ' + e.message));
     };
 
     // Logout
@@ -233,7 +281,7 @@
       // Header
       let headRow = '<tr><th>Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
-      headRow += `<th>%</th></tr>`;
+      headRow += `<th>%</th><th>Eliminar</th></tr>`;
       thead.innerHTML = headRow;
 
       // Body
@@ -247,6 +295,7 @@
           <td><input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)"></td>
           ${checks}
           <td><strong>${percent}%</strong></td>
+          <td><button class="delete-btn" onclick="deleteHabit(${i})">✖</button></td>
         </tr>`;
       }).join('');
     }
@@ -266,28 +315,52 @@
       await save();
     };
 
-    // Añadir hábito
-    window.addHabit = async function() {
+    // Añadir hábito sin prompt, con input inline
+    addHabitBtn.onclick = async () => {
       const month = monthSelect.value;
-      const name = prompt('Nombre del hábito:');
-      if (name) {
-        const days = daysInMonth[month];
-        if (!data[month]) data[month] = [];
-        data[month].push({ name, days: Array(days).fill(false) });
-        await save();
-        renderTable();
+      const name = newHabitInput.value.trim();
+      if (!name) {
+        alertUser('Escribe un nombre para el hábito');
+        return;
       }
+      const days = daysInMonth[month];
+      if (!data[month]) data[month] = [];
+      data[month].push({ name, days: Array(days).fill(false) });
+      await save();
+      renderTable();
+      newHabitInput.value = '';
     };
 
-    // Borrar todo el mes
-    window.clearMonth = async function() {
+    // Eliminar hábito individual
+    window.deleteHabit = async function(index) {
       const month = monthSelect.value;
-      if (confirm(`¿Borrar todos los hábitos del mes de ${month}?`)) {
-        data[month] = [];
-        await save();
-        renderTable();
-      }
+      data[month].splice(index, 1);
+      await save();
+      renderTable();
     };
+
+    // Manejo borrado mes completo con confirmación inline
+    clearMonthBtn.onclick = () => {
+      clearMonthBtn.style.display = 'none';
+      confirmClearBtn.style.display = 'inline-block';
+    };
+
+    confirmClearBtn.onclick = async () => {
+      const month = monthSelect.value;
+      data[month] = [];
+      await save();
+      renderTable();
+      confirmClearBtn.style.display = 'none';
+      clearMonthBtn.style.display = 'inline-block';
+    };
+
+    // Mensajes simples sin alert pop-up
+    function alertUser(msg) {
+      // Podemos mejorar esto con un div de notificaciones, por ahora console.log
+      console.log(msg);
+      // O mostrar mensaje temporal visible (opcional)
+      // Por simplicidad aquí solo console.log para no romper embed
+    }
 
   </script>
 </body>
