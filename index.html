@@ -1,131 +1,164 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Habit Tracker</title>
+  <meta charset="UTF-8" />
+  <title>Habit Tracker con Firebase Auth</title>
   <style>
-    :root {
-      --color-bg: #ffffff;
-      --color-accent: #ececec;
-      --color-blue: #e0f0ff;
-      --color-blue-dark: #4a90e2;
-      --color-text: #333;
-      --color-border: #ddd;
-      --radius: 8px;
-    }
     body {
-      font-family: "Inter", sans-serif;
-      background: var(--color-bg);
-      color: var(--color-text);
-      padding: 16px;
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
       margin: 0;
+      padding: 20px;
     }
     .tracker {
       background: #fff;
-      padding: 16px;
-      border-radius: var(--radius);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       overflow-x: auto;
     }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 12px;
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
     }
     .controls {
       display: flex;
-      flex-wrap: wrap;
       justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
       margin-bottom: 10px;
     }
-    select, button, input.habit-input {
+    .controls select, .controls button {
+      margin: 5px;
+      padding: 6px 12px;
       font-size: 14px;
-      margin: 4px 0;
-      padding: 6px 10px;
-      border-radius: var(--radius);
-      border: 1px solid var(--color-border);
-      background: #f9f9f9;
-    }
-    button:hover {
-      background: #eee;
-      cursor: pointer;
     }
     table {
       border-collapse: collapse;
       width: 100%;
-      min-width: 850px;
+      min-width: 900px;
     }
     th, td {
-      border: 1px solid var(--color-border);
+      border: 1px solid #dee2e6;
       padding: 4px;
       text-align: center;
     }
     th {
-      background: var(--color-accent);
-      font-weight: 500;
+      background-color: #007bff;
+      color: white;
+      position: sticky;
+      top: 0;
     }
-    .habit-cell {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .delete-btn {
-      display: none;
-      background: none;
-      border: none;
-      font-size: 14px;
-      color: #999;
-      cursor: pointer;
-    }
-    tr:hover .delete-btn {
-      display: inline;
-    }
-    input[type="text"] {
+    input.habit-name {
       width: 100%;
       border: none;
-      background: transparent;
-      font-weight: 500;
+      background: none;
+      font-weight: bold;
+      text-align: left;
     }
     input[type="checkbox"] {
       transform: scale(1.2);
     }
-    .label-col {
-      background: var(--color-blue);
-      font-weight: bold;
+    #loginDiv, #appDiv {
+      max-width: 900px;
+      margin: auto;
+    }
+    #sign-out {
+      margin-top: 15px;
+      padding: 8px 16px;
+      font-size: 16px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="tracker">
-    <h1>Habit Tracker</h1>
-    <div class="controls">
-      <div>
-        <label for="month">Mes:</label>
-        <select id="month" onchange="renderTable()"></select>
-        <button onclick="clearChecks()">🧼 Borrar casillas</button>
-      </div>
-      <div>
-        <input type="text" id="habitInput" class="habit-input" placeholder="Nuevo hábito">
-        <button onclick="addHabit()">➕ Añadir</button>
-      </div>
-    </div>
-    <table>
-      <thead id="thead"></thead>
-      <tbody id="tbody"></tbody>
-    </table>
+
+  <div id="loginDiv">
+    <h2>Iniciar sesión o registrarse</h2>
+    <input id="email" type="email" placeholder="Email" /><br />
+    <input id="password" type="password" placeholder="Contraseña" /><br />
+    <button id="sign-up">Registrarse</button>
+    <button id="sign-in">Iniciar sesión</button>
   </div>
 
-  <script>
-    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  <div id="appDiv" style="display:none;">
+    <div class="tracker">
+      <h1>Habit Tracker</h1>
+      <div class="controls">
+        <div>
+          <label for="month">Mes:</label>
+          <select id="month" onchange="renderTable()"></select>
+          <button onclick="clearMonth()">Borrar Todo</button>
+        </div>
+        <button onclick="addHabit()">➕ Añadir Hábito</button>
+      </div>
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <button id="sign-out">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+    import { getAuth,
+             createUserWithEmailAndPassword,
+             signInWithEmailAndPassword,
+             signOut,
+             onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    // Config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyButOI6-sOf93l8J9WZU48IYH2V9posmRA",
+      authDomain: "habit-tracker-458af.firebaseapp.com",
+      projectId: "habit-tracker-458af",
+      storageBucket: "habit-tracker-458af.firebasestorage.app",
+      messagingSenderId: "149185953407",
+      appId: "1:149185953407:web:683a62447c615a8b0b094a",
+      measurementId: "G-Z234V0S40T"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // UI refs
+    const loginDiv = document.getElementById('loginDiv');
+    const appDiv = document.getElementById('appDiv');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const signUpBtn = document.getElementById('sign-up');
+    const signInBtn = document.getElementById('sign-in');
+    const signOutBtn = document.getElementById('sign-out');
+
+    // Datos de hábitos y usuario actual
+    let currentUser = null;
+    let data = {}; // estructura: { Enero: [{name:"", days:[bool,...]}, ...], Febrero: [...], ... }
+
+    // Meses y días
+    const months = [
+      'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+    ];
     const daysInMonth = {
       Enero: 31, Febrero: 28, Marzo: 31, Abril: 30, Mayo: 31, Junio: 30,
       Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31
     };
+
+    // UI select y tabla
     const monthSelect = document.getElementById('month');
-    const habitInput = document.getElementById('habitInput');
     const thead = document.getElementById('thead');
     const tbody = document.getElementById('tbody');
-    let data = JSON.parse(localStorage.getItem('habitData') || '{}');
 
+    // Carga meses en el select
     months.forEach(m => {
       const opt = document.createElement('option');
       opt.value = m;
@@ -133,19 +166,74 @@
       monthSelect.appendChild(opt);
     });
 
-    function save() {
-      localStorage.setItem('habitData', JSON.stringify(data));
+    // Registro
+    signUpBtn.onclick = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => alert('Usuario registrado correctamente'))
+        .catch(e => alert('Error al registrar: ' + e.message));
+    };
+
+    // Login
+    signInBtn.onclick = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      signInWithEmailAndPassword(auth, email, password)
+        .catch(e => alert('Error al iniciar sesión: ' + e.message));
+    };
+
+    // Logout
+    signOutBtn.onclick = () => {
+      signOut(auth);
+    };
+
+    // Escuchar cambios de sesión
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        loginDiv.style.display = 'none';
+        appDiv.style.display = 'block';
+        // Cargar datos Firestore
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          data = docSnap.data();
+        } else {
+          // Inicializar con meses vacíos
+          data = {};
+          months.forEach(m => data[m] = []);
+          await save();
+        }
+        // Poner mes actual y renderizar
+        const now = new Date();
+        monthSelect.value = months[now.getMonth()];
+        renderTable();
+      } else {
+        currentUser = null;
+        loginDiv.style.display = 'block';
+        appDiv.style.display = 'none';
+        data = {};
+      }
+    });
+
+    // Guardar datos a Firestore
+    async function save() {
+      if (!currentUser) return;
+      const docRef = doc(db, "users", currentUser.uid);
+      await setDoc(docRef, data);
     }
 
+    // Render tabla
     function renderTable() {
       const month = monthSelect.value;
-      const days = daysInMonth[month];
       if (!data[month]) data[month] = [];
 
+      const days = daysInMonth[month];
       // Header
-      let headRow = '<tr><th class="label-col">Hábito</th>';
+      let headRow = '<tr><th>Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
-      headRow += '<th class="label-col">%</th></tr>';
+      headRow += `<th>%</th></tr>`;
       thead.innerHTML = headRow;
 
       // Body
@@ -156,59 +244,51 @@
         const completed = habit.days.filter(x => x).length;
         const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
         return `<tr>
-          <td class="habit-cell label-col">
-            <input type="text" value="${habit.name}" onchange="renameHabit(${i}, this.value)">
-            <button class="delete-btn" onclick="deleteHabit(${i})">🗑</button>
-          </td>
+          <td><input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)"></td>
           ${checks}
           <td><strong>${percent}%</strong></td>
         </tr>`;
       }).join('');
     }
 
-    function addHabit() {
-      const name = habitInput.value.trim();
-      if (!name) return;
-      const month = monthSelect.value;
-      const days = daysInMonth[month];
-      data[month].push({ name, days: Array(days).fill(false) });
-      habitInput.value = '';
-      save();
-      renderTable();
-    }
-
-    function toggle(habitIdx, dayIdx) {
+    // Toggle checkbox
+    window.toggle = async function(habitIdx, dayIdx) {
       const month = monthSelect.value;
       data[month][habitIdx].days[dayIdx] = !data[month][habitIdx].days[dayIdx];
-      save();
-      renderTable();
-    }
-
-    function renameHabit(index, newName) {
-      const month = monthSelect.value;
-      data[month][index].name = newName;
-      save();
-    }
-
-    function deleteHabit(index) {
-      const month = monthSelect.value;
-      data[month].splice(index, 1);
-      save();
-      renderTable();
-    }
-
-    function clearChecks() {
-      const month = monthSelect.value;
-      data[month].forEach(h => h.days = h.days.map(() => false));
-      save();
-      renderTable();
-    }
-
-    window.onload = () => {
-      const now = new Date();
-      monthSelect.value = months[now.getMonth()];
+      await save();
       renderTable();
     };
+
+    // Renombrar hábito
+    window.renameHabit = async function(index, newName) {
+      const month = monthSelect.value;
+      data[month][index].name = newName;
+      await save();
+    };
+
+    // Añadir hábito
+    window.addHabit = async function() {
+      const month = monthSelect.value;
+      const name = prompt('Nombre del hábito:');
+      if (name) {
+        const days = daysInMonth[month];
+        if (!data[month]) data[month] = [];
+        data[month].push({ name, days: Array(days).fill(false) });
+        await save();
+        renderTable();
+      }
+    };
+
+    // Borrar todo el mes
+    window.clearMonth = async function() {
+      const month = monthSelect.value;
+      if (confirm(`¿Borrar todos los hábitos del mes de ${month}?`)) {
+        data[month] = [];
+        await save();
+        renderTable();
+      }
+    };
+
   </script>
 </body>
 </html>
