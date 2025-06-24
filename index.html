@@ -2,115 +2,171 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Habit Tracker con Firebase Auth</title>
+  <title>Habit Tracker para Notion</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background: transparent;
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      color: #1a1a1a;
+      width: 100vw;
+      height: 100vh;
+      overflow-x: hidden;
     }
     .tracker {
       background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      overflow-x: auto;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: none;
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
     }
     h1, h2 {
+      font-weight: 600;
+      font-size: 1.5rem;
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 1rem;
+      color: #37352f;
     }
     .controls {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      gap: 8px;
     }
     .controls select, .controls button {
-      margin: 5px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       padding: 6px 12px;
       font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      color: #37352f;
+    }
+    .controls select:hover, .controls button:hover {
+      background: #e2e2e2;
     }
     table {
       border-collapse: collapse;
       width: 100%;
-      min-width: 900px;
+      min-width: 600px;
+      overflow-x: auto;
     }
     th, td {
-      border: 1px solid #dee2e6;
-      padding: 4px;
+      border: 1px solid #e2e2e2;
+      padding: 6px 8px;
       text-align: center;
-      vertical-align: middle;
+      font-size: 13px;
+      color: #37352f;
+      user-select: none;
     }
     th {
-      background-color: #007bff;
-      color: white;
+      background-color: #fafafa;
+      font-weight: 600;
       position: sticky;
       top: 0;
+      z-index: 2;
     }
     input.habit-name {
       width: 100%;
       border: none;
-      background: none;
-      font-weight: bold;
+      background: transparent;
+      font-weight: 600;
+      font-size: 14px;
+      color: #37352f;
       text-align: left;
+      padding: 0;
+      margin: 0;
+    }
+    input.habit-name:focus {
+      outline: 1px solid #a8a8a8;
+      background: #fff;
     }
     input[type="checkbox"] {
-      transform: scale(1.2);
+      transform: scale(1.15);
       cursor: pointer;
     }
     #loginDiv, #appDiv {
-      max-width: 900px;
-      margin: auto;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 12px;
+      box-sizing: border-box;
     }
     #sign-out {
-      margin-top: 15px;
-      padding: 8px 16px;
-      font-size: 16px;
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button.delete-btn {
-      background-color: #dc3545;
-      color: white;
+      margin-top: 16px;
+      padding: 8px 14px;
+      font-size: 14px;
+      background-color: #e0e0e0;
+      color: #37352f;
       border: none;
       border-radius: 4px;
-      padding: 2px 6px;
       cursor: pointer;
-      font-weight: bold;
+      width: 100%;
+      max-width: 200px;
+      transition: background-color 0.2s ease;
     }
-    button.delete-btn:hover {
-      background-color: #b02a37;
+    #sign-out:hover {
+      background-color: #cacaca;
     }
-    .add-habit-container {
+    /* Contenedor para nuevo hábito */
+    #newHabitContainer {
       display: flex;
-      align-items: center;
       gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      max-width: 100%;
     }
-    .add-habit-container input {
-      padding: 6px 8px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+    #newHabitInput {
       flex-grow: 1;
+      padding: 6px 10px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      color: #37352f;
     }
-    .clear-confirm {
-      background-color: #ffc107;
-      color: black;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 12px;
+    #addHabitBtn, #clearMonthBtn {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 14px;
       cursor: pointer;
-      margin-left: 10px;
-      font-weight: bold;
+      color: #37352f;
+      transition: background-color 0.2s ease;
     }
-    .clear-confirm:hover {
-      background-color: #e0a800;
+    #addHabitBtn:hover, #clearMonthBtn:hover {
+      background: #e2e2e2;
+    }
+    /* Responsive para móvil y pantallas pequeñas */
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .controls select, .controls button {
+        width: 100%;
+      }
+      table {
+        min-width: 100%;
+        font-size: 12px;
+      }
+      input.habit-name {
+        font-size: 13px;
+      }
+      #newHabitContainer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #addHabitBtn, #clearMonthBtn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -118,8 +174,8 @@
 
   <div id="loginDiv">
     <h2>Iniciar sesión o registrarse</h2>
-    <input id="email" type="email" placeholder="Email" /><br />
-    <input id="password" type="password" placeholder="Contraseña" /><br />
+    <input id="email" type="email" placeholder="Email" autocomplete="username"/><br />
+    <input id="password" type="password" placeholder="Contraseña" autocomplete="current-password"/><br />
     <button id="sign-up">Registrarse</button>
     <button id="sign-in">Iniciar sesión</button>
   </div>
@@ -131,12 +187,11 @@
         <div>
           <label for="month">Mes:</label>
           <select id="month" onchange="renderTable()"></select>
-          <button id="clear-month-btn">Borrar Todo</button>
-          <button id="confirm-clear-btn" class="clear-confirm" style="display:none;">Confirmar Borrado</button>
+          <button id="clearMonthBtn">Borrar Todo</button>
         </div>
-        <div class="add-habit-container">
-          <input type="text" id="new-habit-name" placeholder="Nuevo hábito..." />
-          <button id="add-habit-btn">➕ Añadir</button>
+        <div id="newHabitContainer">
+          <input id="newHabitInput" type="text" placeholder="Nombre nuevo hábito" />
+          <button id="addHabitBtn">➕ Añadir Hábito</button>
         </div>
       </div>
       <table>
@@ -157,7 +212,6 @@
              onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    // Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyButOI6-sOf93l8J9WZU48IYH2V9posmRA",
       authDomain: "habit-tracker-458af.firebaseapp.com",
@@ -173,7 +227,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // UI refs
     const loginDiv = document.getElementById('loginDiv');
     const appDiv = document.getElementById('appDiv');
     const emailInput = document.getElementById('email');
@@ -184,16 +237,13 @@
     const monthSelect = document.getElementById('month');
     const thead = document.getElementById('thead');
     const tbody = document.getElementById('tbody');
-    const newHabitInput = document.getElementById('new-habit-name');
-    const addHabitBtn = document.getElementById('add-habit-btn');
-    const clearMonthBtn = document.getElementById('clear-month-btn');
-    const confirmClearBtn = document.getElementById('confirm-clear-btn');
+    const newHabitInput = document.getElementById('newHabitInput');
+    const addHabitBtn = document.getElementById('addHabitBtn');
+    const clearMonthBtn = document.getElementById('clearMonthBtn');
 
-    // Datos de hábitos y usuario actual
     let currentUser = null;
-    let data = {}; // estructura: { Enero: [{name:"", days:[bool,...]}, ...], Febrero: [...], ... }
+    let data = {};
 
-    // Meses y días
     const months = [
       'Enero','Febrero','Marzo','Abril','Mayo','Junio',
       'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
@@ -211,49 +261,48 @@
       monthSelect.appendChild(opt);
     });
 
-    // Registro
     signUpBtn.onclick = () => {
-      const email = emailInput.value;
-      const password = passwordInput.value;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        alert('Por favor, completa email y contraseña.');
+        return;
+      }
       createUserWithEmailAndPassword(auth, email, password)
-        .then(() => {
-          // Mensaje sin alert
-          alertUser('Usuario registrado correctamente');
-        })
-        .catch(e => alertUser('Error al registrar: ' + e.message));
+        .then(() => alert('Usuario registrado correctamente'))
+        .catch(e => alert('Error al registrar: ' + e.message));
     };
 
-    // Login
     signInBtn.onclick = () => {
-      const email = emailInput.value;
-      const password = passwordInput.value;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        alert('Por favor, completa email y contraseña.');
+        return;
+      }
       signInWithEmailAndPassword(auth, email, password)
-        .catch(e => alertUser('Error al iniciar sesión: ' + e.message));
+        .catch(e => alert('Error al iniciar sesión: ' + e.message));
     };
 
-    // Logout
     signOutBtn.onclick = () => {
       signOut(auth);
     };
 
-    // Escuchar cambios de sesión
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
         loginDiv.style.display = 'none';
         appDiv.style.display = 'block';
-        // Cargar datos Firestore
+
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           data = docSnap.data();
         } else {
-          // Inicializar con meses vacíos
           data = {};
           months.forEach(m => data[m] = []);
           await save();
         }
-        // Poner mes actual y renderizar
         const now = new Date();
         monthSelect.value = months[now.getMonth()];
         renderTable();
@@ -265,14 +314,12 @@
       }
     });
 
-    // Guardar datos a Firestore
     async function save() {
       if (!currentUser) return;
       const docRef = doc(db, "users", currentUser.uid);
       await setDoc(docRef, data);
     }
 
-    // Render tabla
     function renderTable() {
       const month = monthSelect.value;
       if (!data[month]) data[month] = [];
@@ -281,7 +328,7 @@
       // Header
       let headRow = '<tr><th>Hábito</th>';
       for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
-      headRow += `<th>%</th><th>Eliminar</th></tr>`;
+      headRow += `<th>%</th></tr>`;
       thead.innerHTML = headRow;
 
       // Body
@@ -290,78 +337,130 @@
           `<td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggle(${i},${j})"></td>`
         ).join('');
         const completed = habit.days.filter(x => x).length;
-        const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
+        const percent = days > 0 ? Math.round(completed / days * 100) : 0;
         return `<tr>
-          <td><input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)"></td>
+          <td><input class="habit-name" type="text" value="${escapeHtml(habit.name)}" onchange="updateName(${i}, this.value)" /></td>
           ${checks}
-          <td><strong>${percent}%</strong></td>
-          <td><button class="delete-btn" onclick="deleteHabit(${i})">✖</button></td>
+          <td>${percent}%</td>
         </tr>`;
       }).join('');
+
+      // Añadimos eventos a inputs checkbox por delegación
+      // Ya están inline en el onchange, no es necesario aquí.
+
+      // Actualizamos estilos etc. si quieres.
     }
 
-    // Toggle checkbox
-    window.toggle = async function(habitIdx, dayIdx) {
+    window.toggle = function(habitIndex, dayIndex) {
       const month = monthSelect.value;
-      data[month][habitIdx].days[dayIdx] = !data[month][habitIdx].days[dayIdx];
-      await save();
+      if (!data[month]) data[month] = [];
+      const habit = data[month][habitIndex];
+      if (!habit) return;
+      habit.days[dayIndex] = !habit.days[dayIndex];
+      save();
       renderTable();
     };
 
-    // Renombrar hábito
-    window.renameHabit = async function(index, newName) {
+    window.updateName = function(habitIndex, newName) {
       const month = monthSelect.value;
-      data[month][index].name = newName;
-      await save();
+      if (!data[month]) data[month] = [];
+      data[month][habitIndex].name = newName.trim();
+      save();
     };
 
-    // Añadir hábito sin prompt, con input inline
-    addHabitBtn.onclick = async () => {
+    addHabitBtn.onclick = () => {
       const month = monthSelect.value;
+      if (!data[month]) data[month] = [];
       const name = newHabitInput.value.trim();
       if (!name) {
-        alertUser('Escribe un nombre para el hábito');
+        alert('Por favor, escribe el nombre del hábito.');
         return;
       }
       const days = daysInMonth[month];
-      if (!data[month]) data[month] = [];
       data[month].push({ name, days: Array(days).fill(false) });
-      await save();
-      renderTable();
       newHabitInput.value = '';
-    };
-
-    // Eliminar hábito individual
-    window.deleteHabit = async function(index) {
-      const month = monthSelect.value;
-      data[month].splice(index, 1);
-      await save();
+      save();
       renderTable();
     };
 
-    // Manejo borrado mes completo con confirmación inline
     clearMonthBtn.onclick = () => {
-      clearMonthBtn.style.display = 'none';
-      confirmClearBtn.style.display = 'inline-block';
-    };
-
-    confirmClearBtn.onclick = async () => {
       const month = monthSelect.value;
-      data[month] = [];
-      await save();
-      renderTable();
-      confirmClearBtn.style.display = 'none';
-      clearMonthBtn.style.display = 'inline-block';
+      if (!data[month]) data[month] = [];
+      // En lugar de confirm, usamos un modal integrado simple
+      if (window.confirmClear) return; // evitar doble click rápido
+      window.confirmClear = true;
+
+      // Creamos un confirm simple dentro de la página:
+      const confirmDiv = document.createElement('div');
+      confirmDiv.style.position = 'fixed';
+      confirmDiv.style.top = '0';
+      confirmDiv.style.left = '0';
+      confirmDiv.style.width = '100vw';
+      confirmDiv.style.height = '100vh';
+      confirmDiv.style.backgroundColor = 'rgba(0,0,0,0.3)';
+      confirmDiv.style.display = 'flex';
+      confirmDiv.style.justifyContent = 'center';
+      confirmDiv.style.alignItems = 'center';
+      confirmDiv.style.zIndex = '9999';
+
+      const box = document.createElement('div');
+      box.style.background = '#fff';
+      box.style.padding = '20px';
+      box.style.borderRadius = '8px';
+      box.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+      box.style.maxWidth = '320px';
+      box.style.textAlign = 'center';
+      box.style.color = '#37352f';
+
+      box.innerHTML = `<p>¿Seguro que quieres borrar todos los datos de <strong>${month}</strong>?</p>`;
+      const yesBtn = document.createElement('button');
+      yesBtn.textContent = 'Sí, borrar';
+      yesBtn.style.margin = '10px';
+      yesBtn.style.padding = '8px 14px';
+      yesBtn.style.border = 'none';
+      yesBtn.style.borderRadius = '4px';
+      yesBtn.style.cursor = 'pointer';
+      yesBtn.style.background = '#e53935';
+      yesBtn.style.color = 'white';
+
+      const noBtn = document.createElement('button');
+      noBtn.textContent = 'Cancelar';
+      noBtn.style.margin = '10px';
+      noBtn.style.padding = '8px 14px';
+      noBtn.style.border = '1px solid #ddd';
+      noBtn.style.borderRadius = '4px';
+      noBtn.style.cursor = 'pointer';
+
+      yesBtn.onclick = () => {
+        data[month] = [];
+        save();
+        renderTable();
+        document.body.removeChild(confirmDiv);
+        window.confirmClear = false;
+      };
+      noBtn.onclick = () => {
+        document.body.removeChild(confirmDiv);
+        window.confirmClear = false;
+      };
+
+      box.appendChild(yesBtn);
+      box.appendChild(noBtn);
+      confirmDiv.appendChild(box);
+      document.body.appendChild(confirmDiv);
     };
 
-    // Mensajes simples sin alert pop-up
-    function alertUser(msg) {
-      // Podemos mejorar esto con un div de notificaciones, por ahora console.log
-      console.log(msg);
-      // O mostrar mensaje temporal visible (opcional)
-      // Por simplicidad aquí solo console.log para no romper embed
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => {
+        switch (m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return m;
+        }
+      });
     }
-
   </script>
 </body>
 </html>
