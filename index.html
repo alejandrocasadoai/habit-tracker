@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Habit Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .tracker {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .controls select, .controls button {
+      margin: 5px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 900px;
+    }
+    th, td {
+      border: 1px solid #dee2e6;
+      padding: 4px;
+      text-align: center;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+    input.habit-name {
+      width: 100%;
+      border: none;
+      background: none;
+      font-weight: bold;
+      text-align: left;
+    }
+    input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="tracker">
+    <h1>Habit Tracker</h1>
+    <div class="controls">
+      <div>
+        <label for="month">Mes:</label>
+        <select id="month" onchange="renderTable()"></select>
+        <button onclick="clearMonth()">Borrar Todo</button>
+      </div>
+      <button onclick="addHabit()">➕ Añadir Hábito</button>
+    </div>
+    <table>
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const months = [
+      'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+    ];
+    const daysInMonth = {
+      Enero: 31, Febrero: 28, Marzo: 31, Abril: 30, Mayo: 31, Junio: 30,
+      Julio: 31, Agosto: 31, Septiembre: 30, Octubre: 31, Noviembre: 30, Diciembre: 31
+    };
+    const monthSelect = document.getElementById('month');
+    const thead = document.getElementById('thead');
+    const tbody = document.getElementById('tbody');
+    let data = JSON.parse(localStorage.getItem('habitData') || '{}');
+
+    months.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      monthSelect.appendChild(opt);
+    });
+
+    function save() {
+      localStorage.setItem('habitData', JSON.stringify(data));
+    }
+
+    function renderTable() {
+      const month = monthSelect.value;
+      if (!data[month]) data[month] = [];
+
+      const days = daysInMonth[month];
+      // Header
+      let headRow = '<tr><th>Hábito</th>';
+      for (let i = 1; i <= days; i++) headRow += `<th>${i}</th>`;
+      headRow += `<th>%</th></tr>`;
+      thead.innerHTML = headRow;
+
+      // Body
+      tbody.innerHTML = data[month].map((habit, i) => {
+        const checks = habit.days.map((checked, j) =>
+          `<td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggle(${i},${j})"></td>`
+        ).join('');
+        const completed = habit.days.filter(x => x).length;
+        const percent = days > 0 ? Math.round((completed / days) * 100) : 0;
+        return `<tr>
+          <td><input class="habit-name" value="${habit.name}" onchange="renameHabit(${i}, this.value)"></td>
+          ${checks}
+          <td><strong>${percent}%</strong></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function toggle(habitIdx, dayIdx) {
+      const month = monthSelect.value;
+      data[month][habitIdx].days[dayIdx] = !data[month][habitIdx].days[dayIdx];
+      save();
+      renderTable();
+    }
+
+    function renameHabit(index, newName) {
+      const month = monthSelect.value;
+      data[month][index].name = newName;
+      save();
+    }
+
+    function addHabit() {
+      const month = monthSelect.value;
+      const name = prompt('Nombre del hábito:');
+      if (name) {
+        const days = daysInMonth[month];
+        data[month].push({ name, days: Array(days).fill(false) });
+        save();
+        renderTable();
+      }
+    }
+
+    function clearMonth() {
+      const month = monthSelect.value;
+      if (confirm(`¿Borrar todos los hábitos del mes de ${month}?`)) {
+        data[month] = [];
+        save();
+        renderTable();
+      }
+    }
+
+    window.onload = () => {
+      const now = new Date();
+      monthSelect.value = months[now.getMonth()];
+      renderTable();
+    };
+  </script>
+</body>
+</html>
